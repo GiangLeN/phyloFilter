@@ -1,0 +1,11 @@
+name: phyloseqFilter
+title:
+username:
+account: medmic
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 4724585
+bundleId: 5067939
+url: https://medmic.shinyapps.io/phyloseqFilter/
+when: 1632486686.54775
+lastSyncTime: 1632486686.54775
