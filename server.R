@@ -193,12 +193,14 @@ function(input, output, session) {
                 mutate_all(tibble::lst(~str_replace(., ".__", ""))) %>%
                 select(contains("str_replace")) %>% rename_all(gsub, pattern = '_.*', replacement = '') %>%
                 unite(taxonomy,c("Kingdom","Phylum","Class","Order","Family","Genus"), sep=";",remove=TRUE)
-              
+
               ## Replace NA to blank  
               rheaASV <- sapply(taxaTable, gsub, pattern = "NA", replacement = "", fixed = TRUE)
               ## Combine ASVs to asv table
               rheaASV1 <- cbind(t(otu_table(saveData())),rheaASV)
               rheaASV2 <- rheaASV1 %>% as.data.frame %>% rownames_to_column("#OTUId")
+
+#              output$Rhea <- renderPrint(rheaASV2)
               
               ## Mapping file
               rheaMapping <- sample_data(saveData())
@@ -210,7 +212,7 @@ function(input, output, session) {
               seqFasta <- seqFasta %>% rownames_to_column()
               colnames(seqFasta) <- c('name','seq')
 
-              output$downloadrheaASV <- downloadHandler(
+              output$downloadRheaASV <- downloadHandler(
                 
                 filename = function() {
                   
@@ -219,7 +221,7 @@ function(input, output, session) {
                 
                 content = function(file) {
                   
-                  write.table(rheaASV2,file,row.names=FALSE, sep= "\t")
+                  write.table(rheaASV2, file, row.names=FALSE, sep= "\t")
                 }
               )
               

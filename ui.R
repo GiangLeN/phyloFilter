@@ -54,7 +54,7 @@ fluidPage(
     DT::dataTableOutput("taxaTable"),
     textOutput("phyloSave"),
     verbatimTextOutput("saveFile"),
-#    verbatimTextOutput("Rhea")
+#    verbatimTextOutput("Rhea"),
     textOutput("unique")
     
   )
