@@ -33,16 +33,15 @@ fluidPage(
     downloadButton("downloadData", "Final phyloseq"),
     downloadButton("downloadTree", "Tree"),
     h4("Rhea inputs"),
-    downloadButton("downloadRheaASV", "Rhea ASVs"),
-    downloadButton("downloadRheaMapping", "Rhea Mapping"),
-    downloadButton("downloadRheaSeq", "Rhea Sequences"),
+    downloadButton("downloadRheaASV", "Rhea_ASV"),
+    downloadButton("downloadRheaMapping", "Rhea_Mapping"),
+    downloadButton("downloadRheaSeq", "Rhea_Sequences"),
     h4("MicrobiomeAnalyst inputs"),
-    downloadButton("downloadMAnalystASV", "ASV table"),
-    downloadButton("downloadMAnalystTaxa", "Taxa table"),
+    downloadButton("downloadMAnalystASV", "MA_ASVs"),
+    downloadButton("downloadMAnalystTaxa", "Taxa_table"),
     downloadButton("downloadMAnalystMapping", "Metafile"),
-    h5("Note: The metafile should contain no columns with NA or blank spaces.")
+    h5("Note: The metafile should contain no columns with NA or blank spaces."),
 
-    
   ),
   
   mainPanel(
@@ -61,4 +60,4 @@ fluidPage(
   
 )
 
-##rsconnect::deployApp('Work/learnedToday/App/', appName = "phyloFilter")
+##rsconnect::deployApp('Work/learnedToday/App/', appName = "phyloFilter", account = "giangle")

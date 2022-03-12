@@ -9,10 +9,6 @@ library("Biostrings")
 
 options(repos = BiocManager::repositories())
 
-make.true.NA <- function(x) if(is.character(x)||is.factor(x)){
-  is.na(x) <- x=="NA"; x} else {
-    x}
-
 writeFastaFile<-function(data, filename){
   
   fastaLines = c()
@@ -57,10 +53,9 @@ function(input, output, session) {
         if (methods::is(ps(), "phyloseq")){
           
           ## Check phyloseq slot names
-          phyloSlots <- reactive(getslots.phyloseq(ps()))
-          
           ## Slot require for full analysis
           mustHave <- c("otu_table", "tax_table", "sam_data", "phy_tree", "refseq")
+          phyloSlots <- reactive(getslots.phyloseq(ps()))
           
           output$phyloseq <- renderText(
             
@@ -118,7 +113,7 @@ function(input, output, session) {
               })
               
               saveData <- reactive ({
-                
+                # if no exclusive taxa
                 if (input$excludeTaxa==""){
                   
                   keeptaxa <- prevaContamFreeTable()$ASVs
@@ -186,31 +181,36 @@ function(input, output, session) {
                   
                   ape::write.tree(phy_tree(saveData()), file)
                 }
+                
               )
               
               ## Rhea Create taxonomy column
-              taxaTable <- tax_table(saveData())[,1:6] %>% as.data.frame() %>%
-                mutate_all(tibble::lst(~str_replace(., ".__", ""))) %>%
-                select(contains("str_replace")) %>% rename_all(gsub, pattern = '_.*', replacement = '') %>%
-                unite(taxonomy,c("Kingdom","Phylum","Class","Order","Family","Genus"), sep=";",remove=TRUE)
 
-              ## Replace NA to blank  
-              rheaASV <- sapply(taxaTable, gsub, pattern = "NA", replacement = "", fixed = TRUE)
-              ## Combine ASVs to asv table
-              rheaASV1 <- cbind(t(otu_table(saveData())),rheaASV)
-              rheaASV2 <- rheaASV1 %>% as.data.frame %>% rownames_to_column("#OTUId")
-
-#              output$Rhea <- renderPrint(rheaASV2)
-              
-              ## Mapping file
-              rheaMapping <- sample_data(saveData())
-              rheaMapping1 <- cbind(rownames(rheaMapping), data.frame(rheaMapping, row.names=NULL))
-              names(rheaMapping1)[1]<-"#SampleId"
-              
-              ## Fasta sequences
-              seqFasta <- data.frame(refseq(saveData()))
-              seqFasta <- seqFasta %>% rownames_to_column()
-              colnames(seqFasta) <- c('name','seq')
+              if (any(colnames(tax_table(saveData())) %in% "Species")) {
+                
+                taxaTable <- tax_table(saveData())[,1:7] %>% as.data.frame() %>%
+                  mutate_all(tibble::lst(~str_replace(., ".__", ""))) %>%
+                  select(contains("str_replace")) %>% rename_all(gsub, pattern = '_.*', replacement = '') %>%
+                  unite(taxonomy,c("Kingdom","Phylum","Class","Order","Family","Genus","Species"), sep=";",remove=TRUE)
+                
+                ## Replace NA to blank  
+                rheaASV <- sapply(taxaTable, gsub, pattern = "NA", replacement = "", fixed = TRUE)
+                ## Combine ASVs to asv table
+                rheaASV1 <- cbind(t(otu_table(saveData())),rheaASV)
+                rheaASV2 <- rheaASV1 %>% as.data.frame %>% rownames_to_column("#OTUId")
+              } else {
+                
+                taxaTable <- tax_table(saveData())[,1:6] %>% as.data.frame() %>%
+                  mutate_all(tibble::lst(~str_replace(., ".__", ""))) %>%
+                  select(contains("str_replace")) %>% rename_all(gsub, pattern = '_.*', replacement = '') %>%
+                  unite(taxonomy,c("Kingdom","Phylum","Class","Order","Family","Genus"), sep=";",remove=TRUE)
+                
+                ## Replace NA to blank  
+                rheaASV <- sapply(taxaTable, gsub, pattern = "NA", replacement = "", fixed = TRUE)
+                ## Combine ASVs to asv table
+                rheaASV1 <- cbind(t(otu_table(saveData())),rheaASV)
+                rheaASV2 <- rheaASV1 %>% as.data.frame %>% rownames_to_column("#OTUId")
+              }
 
               output$downloadRheaASV <- downloadHandler(
                 
@@ -225,6 +225,58 @@ function(input, output, session) {
                 }
               )
               
+              
+              ## MicrobiomeAmalyst parsing
+              mAnalystASV <- t(otu_table(saveData())) %>%
+                as.data.frame %>% rownames_to_column("#NAME")
+              row.names(mAnalystASV) <- NULL
+              
+              output$downloadMAnalystASV <- downloadHandler(
+                
+                filename = function() {
+                  
+                  paste0(input$name, "_p", input$prevaTaxa, "_a", input$abunTaxa, "_MA_ASV_table.txt")
+                },
+                
+                content = function(file) {
+                  
+                  write.table(mAnalystASV,file,row.names=FALSE, sep= "\t")
+                }
+              )
+              
+              if (any(colnames(tax_table(saveData())) %in% "Species")) {
+                
+                mAnalystTax <- tax_table(saveData())[,1:7] %>% as.data.frame() %>%
+                  mutate_all(tibble::lst(~str_replace(., ".__", ""))) %>%
+                  select(contains("str_replace")) %>% rename_all(gsub, pattern = '_.*', replacement = '') %>%
+                  rownames_to_column("#TAXONOMY")
+              } else {
+                
+                mAnalystTax <- tax_table(saveData())[,1:6] %>% as.data.frame() %>%
+                  mutate_all(tibble::lst(~str_replace(., ".__", ""))) %>%
+                  select(contains("str_replace")) %>% rename_all(gsub, pattern = '_.*', replacement = '') %>%
+                  rownames_to_column("#TAXONOMY")
+              }
+              
+              
+              output$downloadMAnalystTaxa <- downloadHandler(
+                
+                filename = function() {
+                  
+                  paste0(input$name, "_p", input$prevaTaxa, "_a", input$abunTaxa, "_MA_taxonomy_table.txt")
+                },
+                
+                content = function(file) {
+                  
+                  write.table(mAnalystTax ,file,row.names=FALSE, sep= "\t")
+                }
+              )
+              
+              ## Mapping file   
+              rheaMapping <- sample_data(saveData())
+              rheaMapping1 <- cbind(rownames(rheaMapping), data.frame(rheaMapping, row.names=NULL))
+              names(rheaMapping1)[1]<-"#SampleId"
+              
               output$downloadRheaMapping <- downloadHandler(
                 
                 filename = function() {
@@ -237,6 +289,47 @@ function(input, output, session) {
                   write.table(rheaMapping1,file,row.names=FALSE, sep= "\t")
                 }
               )
+              
+              
+              ## Turns blank to NA
+              mAnalystMapping <- rheaMapping1
+              names(mAnalystMapping)[1]<-"#NAME"
+              
+              mAnalystMapping1 <- mAnalystMapping %>% select_if(~ !any(is.na(.)))
+              
+              output$downloadMAnalystMapping <- downloadHandler(
+                
+                filename = function() {
+                  
+                  paste0(input$name, "_p", input$prevaTaxa, "_a", input$abunTaxa, "_MA_Metadata.txt")
+                },
+                
+                content = function(file) {
+                  
+                  write.table(mAnalystMapping,file,row.names=FALSE, sep= "\t")
+                }
+              )
+              
+              
+#              output$Rhea <- renderPrint(colnames(tax_table(saveData())) %in% "Species")
+              
+              ###output$unique <- renderPrint(
+              output$unique <- renderText(
+                
+                paste0("An online shiny app (https://giangle.shinyapps.io/phyloFilter/) was used to filter ASVs, which presented in less than ",
+                       ceiling(input$abunTaxa * totalReads() / 100), " (", input$abunTaxa, " %) reads and appeared in less than " ,
+                       ceiling(input$prevaTaxa * nsamples(ps()) / 100), " samples (", input$prevaTaxa, " %). A total of ",
+                       nrow(prevaContamFreeTable ()), " ASVs were maintained for downstream analysis.",
+                       "There were ", length(get_taxa_unique(saveData(), taxonomic.rank = "Genus")), " unique genus and ",
+                       length(get_taxa_unique(saveData(), taxonomic.rank = "Species")), " unique species in the final phyloseq." )
+              )
+              
+              ## Fasta sequences
+              seqFasta <- data.frame(refseq(saveData()))
+              seqFasta <- seqFasta %>% rownames_to_column()
+              colnames(seqFasta) <- c('name','seq')
+              
+              output$Rhea <- renderPrint(seqFasta)
               
               output$downloadRheaSeq <- downloadHandler(
                 
@@ -251,79 +344,9 @@ function(input, output, session) {
                 }
               )
               
-              ## MicrobiomeAmalyst parsing
-              mAnalystASV <- t(otu_table(saveData())) %>%
-                as.data.frame %>% rownames_to_column("#NAME")
-              row.names(mAnalystASV) <- NULL
-              
-              mAnalystTax <- tax_table(saveData())[,1:6] %>% as.data.frame() %>%
-                mutate_all(tibble::lst(~str_replace(., ".__", ""))) %>%
-                select(contains("str_replace")) %>% rename_all(gsub, pattern = '_.*', replacement = '') %>%
-                rownames_to_column("#TAXONOMY")
-
-              
-              ## Turns blank to NA
-              mAnalystMapping <- rheaMapping1
-              names(mAnalystMapping)[1]<-"#NAME"
-              
-              mAnalystMapping1 <- mAnalystMapping %>% select_if(~ !any(is.na(.)))
-
-              output$downloadMAnalystASV <- downloadHandler(
-                
-                filename = function() {
-                  
-                  paste0(input$name, "_p", input$prevaTaxa, "_a", input$abunTaxa, "_MA_ASV_table.txt")
-                },
-                
-                content = function(file) {
-                  
-                  write.table(mAnalystASV,file,row.names=FALSE, sep= "\t")
-                }
-              )
-              
-              output$downloadMAnalystTaxa <- downloadHandler(
-                
-                filename = function() {
-                  
-                  paste0(input$name, "_p", input$prevaTaxa, "_a", input$abunTaxa, "_MA_taxa_table.txt")
-                },
-                
-                content = function(file) {
-                  
-                  write.table(mAnalystTax ,file,row.names=FALSE, sep= "\t")
-                }
-              )
-              
-              output$downloadMAnalystMapping <- downloadHandler(
-                
-                filename = function() {
-                  
-                  paste0(input$name, "_p", input$prevaTaxa, "_a", input$abunTaxa, "_MA_mapping.txt")
-                },
-                
-                content = function(file) {
-                  
-                  write.table(mAnalystMapping,file,row.names=FALSE, sep= "\t")
-                }
-              )
-              
-              ###output$unique <- renderPrint(
-              output$unique <- renderText(
-                
-                paste0("An online shiny app (https://giangle.shinyapps.io/phyloFilter/) was used to filter ASVs, which presented in less than ",
-                       ceiling(input$abunTaxa * totalReads() / 100), " (", input$abunTaxa, " %) reads and appeared in less than " ,
-                       ceiling(input$prevaTaxa * nsamples(ps()) / 100), " samples (", input$prevaTaxa, " %). A total of ",
-                       nrow(prevaContamFreeTable ()), " ASVs were maintained for downstream analysis.",
-                       "There were ", length(get_taxa_unique(saveData(), taxonomic.rank = "Genus")), " unique genus and ",
-                       length(get_taxa_unique(saveData(), taxonomic.rank = "Species")), " unique species in the final phyloseq." )
-              )
-              
               ## Text need to be at the end so it does not disrupt the flow
               paste0("The input file has ", nsamples(ps()), " samples, with ", totalReads(), " reads, across ", ntaxa(ps()), " ASVs")
               
-            } else {
-            
-              "Please recheck to make sure that your phyloseq contains the following: otu_table, tax_table, sam_data, phy_tree and/or refseq"
             })
           
           "Phyloseq file: "
