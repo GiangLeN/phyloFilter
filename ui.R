@@ -9,16 +9,16 @@ library("Biostrings")
 
 options(repos = BiocManager::repositories())
 
-taxLevel <- c("Kingdom","Phylum", "Class", "Order")
+taxLevel <- c("Kingdom","Phylum", "Class")
 
 fluidPage(
   
-  titlePanel("Taxa filtering"),
+  titlePanel("Phyloseq taxa filter"),
   
   sidebarPanel(
     
-    textInput("name", "Project's name", value = 'phyloseq'),
     fileInput("file1", "Choose Phyloseq File", accept = ".rds"),
+    textInput("name", "Project's name", value = 'phyloseq'),
     radioButtons("taxaLevel", "Select taxonomic level", selected = "Phylum", taxLevel),
     numericInput("prevaTaxa", "Prevalance, % of samples with ASVs", value = 5, min = 0, max = 100),
     numericInput("abunTaxa", "Abundance, % of ASV overall", value = 0.01, min = 0, max = 100),
@@ -41,20 +41,39 @@ fluidPage(
     downloadButton("downloadMAnalystTaxa", "Taxa_table"),
     downloadButton("downloadMAnalystMapping", "Metafile"),
     h5("Note: The metafile should contain no columns with NA or blank spaces."),
+    h5("Version: 0.1"),
+    tags$footer(
+      "For detail instruction please visit ",
+      tags$a(
+        "https://github.com/GiangLeN/phyloFilter",
+        target = "_blank",
+        href = "https://github.com/GiangLeN/phyloFilter"
+      ),
+      style = "position: absolute; width: 100%; color: black; text-align: left;"
+    ),
+    
+
 
   ),
   
   mainPanel(
     verbatimTextOutput("inPs"),
-    textOutput("summary"),
+    strong(textOutput("summary")),
     textOutput("phyloseq"),
+    textOutput("samdat"),
+    textOutput("refseq"),
+    textOutput("phytree"),
+    br(),
+    strong(textOutput("method")),
     textOutput("filterSummary"),
+    br(),
     plotOutput("taxaFilter", height=1000),
     DT::dataTableOutput("taxaTable"),
     textOutput("phyloSave"),
     verbatimTextOutput("saveFile"),
-#    verbatimTextOutput("Rhea"),
-    textOutput("unique")
+    verbatimTextOutput("Rhea"),
+    textOutput("manual"),
+    
     
   )
   
