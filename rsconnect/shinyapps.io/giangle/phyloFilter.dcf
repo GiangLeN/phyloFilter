@@ -5,10 +5,10 @@ account: giangle
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 5211694
-bundleId: 5675373
+bundleId: 6347164
 url: https://giangle.shinyapps.io/phyloFilter/
-when: 1647092094.20569
-lastSyncTime: 1647092094.20569
+when: 1664371151.99731
+lastSyncTime: 1664371151.99731
 asMultiple: FALSE
 asStatic: FALSE
 ignoredFiles: README.md
