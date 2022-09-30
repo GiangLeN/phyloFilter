@@ -57,12 +57,12 @@ fluidPage(
   ),
   
   mainPanel(
+    strong(textOutput("info")),
     verbatimTextOutput("inPs"),
-    strong(textOutput("summary")),
-    textOutput("phyloseq"),
     textOutput("samdat"),
     textOutput("refseq"),
     textOutput("phytree"),
+    textOutput("phyloseq"),
     br(),
     strong(textOutput("method")),
     textOutput("filterSummary"),

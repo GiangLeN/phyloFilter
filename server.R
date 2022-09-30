@@ -46,19 +46,24 @@ function(input, output, session) {
     readRDS(file$datapath)
   })
 
+  output$info <- renderText(
+    "Phyloseq information:"
+  )
+  
   ## Phyloseq information
   output$inPs <- renderPrint({
-    
+
     ## Check rds is phyloseq
     if (methods::is(ps(), "phyloseq")){
-      
-      ## Remove empty ASVs
-      ps_clean <- reactive(prune_taxa(taxa_sums(ps()) > 0, ps()))
-      
+
       ## Slots info from phyloseq 
-      phyloSlots <- reactive(getslots.phyloseq(ps_clean()))
+      phyloSlots <- reactive(getslots.phyloseq(ps()))
       
       if ("otu_table" %in% phyloSlots() & "tax_table" %in% phyloSlots()){
+        
+        ## Remove empty ASVs
+        ps_clean <- reactive(prune_taxa(taxa_sums(ps()) > 0, ps()))
+        
         ## Compute number of sample for each ASV, store as data.frame
         abunfltdf <- reactive({
           
@@ -98,24 +103,6 @@ function(input, output, session) {
             select(ASVs,input$taxaLevel,Prevalence,Prevalence_percentage,TotalAbundance,Abundance_percentage) %>%
             filter(Prevalence_percentage >= input$prevaTaxa & Abundance_percentage >= input$abunTaxa)
         )
-        
-        output$summary <- renderText(
-          "Phyloseq information:"
-        )
-        
-        ## ASV general information
-        output$filterSummary <- renderText(
-          
-          paste0("An online shiny app (https://giangle.shinyapps.io/phyloFilter/) was used for ASV filtering. Any with number of reads below ",
-                 ceiling(input$abunTaxa * totalReads() / 100), " (", input$abunTaxa, " %) and appeared in less than " ,
-                 ceiling(input$prevaTaxa * nsamples(ps_clean()) / 100), " samples (", input$prevaTaxa, " %) were removed. A total of ",
-                 nrow(prevaContamFreeTable ()), " ASVs were maintained for downstream analysis.",
-                 "There were ", length(get_taxa_unique(finalPs(), taxonomic.rank = "Genus")), " unique genus and ",
-                 length(get_taxa_unique(finalPs(), taxonomic.rank = "Species")), " unique species in the final phyloseq. About ",
-                 round((ntaxa(ps_clean()) - nrow(prevaContamFreeTable ())) / ntaxa(ps_clean()) *100, digits = 2), " % of ASV was removed.")
-        )
-        
-        output$method <- renderText({"Method:"})
         
         ## Render table
         output$taxaTable <- DT::renderDataTable({
@@ -196,7 +183,6 @@ function(input, output, session) {
             mutate_all(tibble::lst(~str_replace(., ".__", ""))) %>%
             select(contains("str_replace")) %>% rename_all(gsub, pattern = '_.*', replacement = '') %>%
             unite(taxonomy,c("Kingdom","Phylum","Class","Order","Family","Genus","Species"), sep=";",remove=TRUE)
-          
         } else {
           
           ## Normal Rhea table
@@ -204,7 +190,6 @@ function(input, output, session) {
             mutate_all(tibble::lst(~str_replace(., ".__", ""))) %>%
             select(contains("str_replace")) %>% rename_all(gsub, pattern = '_.*', replacement = '') %>%
             unite(taxonomy,c("Kingdom","Phylum","Class","Order","Family","Genus"), sep=";",remove=TRUE)
-          
         }
         
         ## Replace NA with blank  
@@ -226,10 +211,11 @@ function(input, output, session) {
             write.table(rheaASV2, file, row.names=FALSE, sep= "\t")
           }
         )
-
+        
         ## MicrobiomeAmalyst parsing
         mAnalystASV <- t(otu_table(finalPs())) %>%
           as.data.frame %>% rownames_to_column("#NAME")
+        
         row.names(mAnalystASV) <- NULL
         
         output$downloadMAnalystASV <- downloadHandler(
@@ -315,7 +301,7 @@ function(input, output, session) {
               }
             )
             
-            "Can export metafile"
+            "Metafile detected"
           } else {
             
             "Note: Missing meta data. Unable to use Rhea or MicrobiomeAnalyst !"
@@ -352,7 +338,7 @@ function(input, output, session) {
             "Note: Missing fasta information (ref_seq). Unable to export this data !"
           }
         )
-
+        
         output$phytree <- renderText(
           
           if ("phy_tree" %in% phyloSlots()){
@@ -377,13 +363,27 @@ function(input, output, session) {
           }
         )
         
-      } else {
+        output$method <- renderText({"Method:"})
         
+        ## ASV general information
+        output$filterSummary <- renderText(
+          
+          paste0("An online shiny app (https://giangle.shinyapps.io/phyloFilter/) was used for ASV filtering. Any ASVs with number of reads below ",
+                 
+                 ceiling(input$abunTaxa * totalReads() / 100), " (", input$abunTaxa, " %) and appeared in less than ",
+                 ceiling(input$prevaTaxa * nsamples(ps_clean()) / 100), " samples (", input$prevaTaxa, " %) were removed. A total of ",
+                 nrow(prevaContamFreeTable ()), " ASVs were maintained for downstream analysis.",
+                 "There were ", length(get_taxa_unique(finalPs(), taxonomic.rank = "Genus")), " unique genera. About ",
+                 round((ntaxa(ps_clean()) - nrow(prevaContamFreeTable ())) / ntaxa(ps_clean()) *100, digits = 2), " % of ASV was removed."
+                 )
+        )
+      } else {
         "Missing otu_table or tax_table. Unable to use this app !"
       }
-    } else {
       
+    } else {
       "Upload phyloseq file to use this app !"
     }
+
   })
 }
